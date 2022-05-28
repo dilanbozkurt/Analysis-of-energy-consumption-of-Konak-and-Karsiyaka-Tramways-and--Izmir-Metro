@@ -1,0 +1,537 @@
+---
+title: "FINAL"
+author: "Dilan Bozkurt"
+date: "11 06 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+INTRODUCTION
+
+The theme of the project is energy, specially the energy consumption of Konak and Karsiyaka Tramways and İzmir Metro.
+There are three data set from İzmir Acik Veri Portalı. First data set is energy consumption by traction values(in my report I will refer it as its Turkish name "cer") second data set is about the amount of energy released by burning one tonne of crude oil (I will refer it as "tep"), and third data set is energy consumption per passenger(I will refer it "per" and "per passenger").There will be 5 analyses in this project:
+
+1)Analysis by Data Visualization for CER,TEP and PER
+2)One Sample T- test for CER,TEP and PER at İzmir Metro
+3)Unpaired Two Sample Test for Tramways
+4)Correlations at Konak Tram, Karsiyaka Tram and İzmir Metro
+5)Regression for Konak Tram, Karsiyaka Tram and İzmir Metro 
+
+TURN DATA SETS INTO DATA FRAMES
+
+```{r }
+data1 <- read.csv("enerji-tuketimi-cer.csv",  sep = ";")
+colnames(data1)
+
+data1 <- type.convert(data1,dec = ",",as.is = FALSE,numerals = c("allow.loss"))
+lapply(data1, class)
+
+colnames(data1)<-c("year","month","metro","karsiyaka.tram","konak.tram")
+data1
+```
+
+```{r }
+data2 <- read.csv("enerji-degerleri-tep.csv",  sep = ";")
+colnames(data2)
+
+data2 <- type.convert(data2,dec = ",",as.is = FALSE,numerals = c("allow.loss"))
+lapply(data2, class)
+
+colnames(data2)<-c("year","month","metro","karsiyaka.tram","konak.tram")
+data2
+```
+
+```{r }
+data3 <- read.csv("enerji-tuketimi-yolcubasina.csv",  sep = ";")
+colnames(data3)
+
+data3 <- type.convert(data3,dec = ",",as.is = FALSE,numerals = c("allow.loss"))
+lapply(data3, class)
+
+colnames(data3)<-c("year","month","metro","karsiyaka.tram","konak.tram")
+data3
+```
+
+
+--------------------Analysis by Data Visualization------------
+
+```{r}
+par(mfrow = c(1,3)) 
+#Energy Consumption per Passenger = EPP
+
+plot(data3$metro ,type="l" ,
+     main = "Metro EPP values per Months", 
+     xlab = "month", 
+     ylab = "EPP",
+     col = "purple")
+
+konak<-plot(data3$karsiyaka.tram ,type="l" ,main="Karsiyaka Tram EPP per Months",xlab = "month", 
+     ylab = "EPP value", col="blue")
+
+
+karsiyaka<-plot(data3$konak.tram, type="l" ,main="KonakTram EPP per Months",xlab = "month", 
+     ylab = "EPP value", col="red")
+
+```
+As you can see from plots,in spring months there is a very visible increase. Then, in summer months, the line is still and then it began to rise in late fall months and through out the winter for every transportation. It can be interpreted as since Izmir is hot in summer, people are tend to stay home or go to local beaches which rarely has trams or metros.And by the schools start to open in late fall months, students start to use  transportation. 
+```{r}
+x <- c(mean(data1$metro),mean(data1$karsiyaka.tram),mean(data1$konak.tram))
+labels <- c("Metro", "Karsiyaka", "Konak")
+piepercent<- round(100*x/sum(x), 1)
+pie(x,labels=piepercent,col = c("lightblue","mistyrose","lightcyan"))
+legend("topright", c("Mean CER of Metro","Mean CER of Karsiyaka Tram","Mean CER of Konak Tram"), cex = 0.8, fill =c("lightblue","mistyrose","lightcyan"))  
+```
+Traction(CER) is the power of transportations' ability to push and move forward itself especially at wheels .It is depends on so many aspects and parts of the vehicle. Such as weight and torque etc. Since metro is a different technology than trams, it has less mechanical working mechanism than trams,so it has less CER. The difference of CER between the trams may be the result of size of trams and also the number of people that are in the tram. Karsiyaka Tram consume the most CER power.
+
+```{r}
+x <- c(sd(data2$metro),sd(data2$karsiyaka.tram),sd(data2$konak.tram))
+barplot(x,  col = c("mistyrose","lavender", "cornsilk"), ylab = "Standard Deviation",names.arg = c("Metro", "Karsiyaka Tram", "Konak Tram"))
+```
+As you can see tep values in Trams are close to the mean of the datasets because they have much less small standard deviation compairing to to Metro.
+A big standard deviation is not necessarily a bad thing; it just says that there is a large amount of variation in the group that is being studied.Since metro data is in a situation where people just observe and record data, it does not cause problem. Trams are in much different circumstances than metro.Their routes and size are different and they built by different mechanism so they have different level of tep consumption.
+
+----------------------------------CER,TEP,ENERGY PER PASSENGER FOR EACH TRANSPORTATION DATA------------------------------
+
+To see, which transportation vehicle consume how much energy, I decided to make my own data frames. Each transportation has its own consumption of energy types. For example, the first data frame, it is called "karsiyaka" and it has Karsiyaka Tram's CER,TEP,PER energy consumption as columns and rows are the all the values from each months.
+
+KARSIYKA TRAM'S CER TEP AND PER PASSENGER CONSUMPTION
+```{r}
+karsiyaka.cer <- data1[, c('month','karsiyaka.tram')]
+colnames(karsiyaka.cer)<-c("month","cer")
+
+
+karsiyaka.tep <- data2[, c('month','karsiyaka.tram')]
+colnames(karsiyaka.tep)<-c("month","tep")
+
+karsiyaka.per.passenger <- data3[, c('month','karsiyaka.tram')]
+colnames(karsiyaka.per.passenger)<-c("month","per-passenger")
+
+karsiyaka <- cbind(karsiyaka.cer$cer,karsiyaka.tep$tep,karsiyaka.per.passenger$`per-passenger`)
+colnames(karsiyaka) <- c("cer","tep","per.passenger")
+karsiyaka <- as.data.frame(karsiyaka)
+karsiyaka
+```
+
+KONAK TRAM'S CER TEP AND PER PASSENGER CONSUMPTION
+```{r}
+konak.cer <- data1[, c('month','konak.tram')]
+colnames(konak.cer)<-c("month","cer")
+
+konak.tep <- data2[, c('month','konak.tram')]
+colnames(konak.tep)<-c("month","tep")
+
+konak.per.passenger <- data3[, c('month','konak.tram')]
+colnames(konak.per.passenger)<-c("month","per-passenger")
+
+konak <- cbind(konak.cer$cer,konak.tep$tep,konak.per.passenger$`per-passenger`)
+colnames(konak) <- c("cer","tep","per.passenger")
+konak <- as.data.frame(konak)
+konak
+```
+
+KONAK METRO TRAM'S CER TEP AND PER PASSENGER CONSUMPTION
+```{r}
+metro.cer <- data1[, c('month','metro')]
+colnames(metro.cer)<-c("month","cer")
+
+metro.tep <- data2[, c('month','metro')]
+colnames(metro.tep)<-c("month","tep")
+
+metro.per.passenger <- data3[, c('month','metro')]
+colnames(metro.per.passenger)<-c("month","per-passenger")
+
+metro <- cbind(metro.cer$cer,metro.tep$tep,metro.per.passenger$`per-passenger`)
+colnames(metro) <- c("cer","tep","per.passenger")
+metro <- as.data.frame(metro)
+metro
+```
+
+
+----------------------------------- ONE SAMPLE T-TEST FOR CER DATA  --------------------------------------------------------
+
+One-sample t-test can be used only, when the data are normally distributed .This can be checked using different methods. First,I draw a boxplot. It does not look like perfect normal distributed, it look negative skewed. But with the qqplot (quantile-quantile plots), it looks normal distributed.
+```{r}
+boxplot(data1$metro, ylab = "CER")
+```
+
+```{r}
+library("car")
+qqPlot(data1$metro, ylab = "CER")
+```
+
+So to make sure, I run Shapiro test to check normality. From the output, the p-value=0.12 > 0.05 implying that the distribution of the data are not significantly different from normal distribution. In other words, I can assume the normality.
+```{r}
+#H0:The data are normally distributed 
+#HA:The data are not normally distributed
+shapiro.test(data1$metro)
+```
+
+```{r}
+#one sample t test for metro cer
+#H0 = cer = 2 = the mean (m) of the sample is equal to the theoretical mean 2
+#HA = cer != 2 = the mean (m) of the sample is not  equal to the theoretical mean 2
+metro.t.test2<- t.test(data1$metro, mu =2 , conf.level = 0.95)
+metro.t.test2
+```
+From output of t-test, p= 0.03 <0.05 we can reject the null hypothesis. I can conclude that the sample mean value of cer is significantly different from 2 kWh/km.
+
+----------------------------------- ONE SAMPLE T-TEST FOR TEP DATA  --------------------------------------------------------
+
+The median of the boxplot is in the middle of the box, it is good thing for normality distribution but the size of whiskers is different. I draw a qqplot, it looks good, points fall approximately along the reference line and also Shapiro test also verify the normality. I can apply t-test.
+```{r}
+boxplot(data2$metro, ylab = "TEP")
+```
+
+```{r}
+library("car")
+qqPlot(data2$metro, ylab = "TEP")
+```
+
+```{r}
+shapiro.test(data2$metro)
+```
+
+```{r}
+#H0:The mean of the sample is greater than 300
+#HA:The mean of the sample is equal or less than 300
+metro.t.test<- t.test(data2$metro, alternative = "less", mu =300 , conf.level = 0.95)
+metro.t.test
+```
+The p-value is 0.88 > 0.05 . I fail the reject null hypothesis. I can not reject that the sample mean value of cer is significantly greater than 300.
+
+----------------------------------- ONE SAMPLE T-TEST FOR ENERGY PER PASSENGER DATA--------------------------------------------------------
+
+At the boxplot, I can see that it is skewed and has 2 outliers and at the qqplot there are barely points on the line but the Shapiro test's p-value is 0.059. So I assume normality and go on with the t-test. 
+```{r}
+boxplot(data3$metro, ylab= "PER PASSENGER")
+```
+
+```{r}
+library("car")
+qqPlot(data3$metro,ylab = "PER PASSENGER")
+```
+
+```{r}
+shapiro.test(data3$metro)
+```
+
+```{r}
+#H0:The mean of the sample is less than 1
+#HA:The mean of the sample is equal or  greater than 1
+metro.t.test<- t.test(data3$metro, alternative = "greater", mu =1 , conf.level = 0.95)
+metro.t.test
+```
+The p-value is 0.049 > 0.05 so I fail to reject H0. I can not reject that the sample mean value of per passenger is significantly less than 1.
+
+---------------------------- UNPAIRED TWO SAMPLE TEST FOR TRAMS ----------------------------------------------------------------------
+
+I want to see if the mean of consumption per passenger(i refer it as PER in this section) is significantly different or not betwwen Konak and Karsiyaka tram since both of them are the same transportation type. Firstly, data3 dataframe holds the PER values.I created a data frame called "tramways" which has 2 columns named District that has Konak and Karsiyaka, other column named PER which has PER values. 
+
+```{r}
+konak <- data3$konak.tram
+karsiyaka <- data3$karsiyaka.tram
+tramways <- data.frame( 
+                District = rep(c("Konak", "Karsiyaka"), each = 15),
+                PER = c(konak,  karsiyaka)
+                )
+tramways
+```
+
+
+First, I check normality with boxplot .At boxplot, both of Konak and Karsiyaka has two outliers.Konak looks normal with median being at the center but Karsiyaka seems like skewed. 
+```{r}
+boxplot.district <- ggplot(tramways, aes(x=District, y=PER ,color=District)) + geom_boxplot()
+boxplot.district
+```
+
+From the output of Shapiro test, the two p-values are less than the significance level 0.05 implying that the distribution of the data are  significantly different from the normal distribution.But since t-test needs normality, I assume the date are normal and go on with the t-test.
+```{r}
+# Shapiro-Wilk normality test for Karsiyaka
+with(tramways, shapiro.test(PER[District == "Karsiyaka"])) # p = 0.0002
+# Shapiro-Wilk normality test for Konak
+with(tramways, shapiro.test(PER[District == "Konak"]))# p = 0.01
+```
+
+To apply Student's t-test, date needs homoscedasticity. It means that the variance of the two groups are equivalent. It can be checked with F-test.
+```{r}
+#f-test
+tramways.ftest <- var.test(PER ~ District , data = tramways)
+tramways.ftest
+```
+The p-value of F-test is p = 1.11e-05 = 0.00001  .It’s less than the significance level alpha = 0.05. There is a significant difference between the variances of the two sets of data. Therefore, variances of the two groups being compared are different(heteroscedasticity),so I will use the Welch t test since data is not provide homoscedasticity. Welch t test is an adaptation of Student t-test.
+
+I will apply Welch Two Sample t-test for whether the average Karsiyaka Tram’s PER is less than the average Konak Tram’s PER.In the the test as a parameter I wrote var.equal = FALSE, it will perform Welch test instead of Student's t-test. 
+
+My hypothesis are:
+H0= Difference in means of PER values of Karsiyaka and Konak is less or equals to 0
+HA = Difference in means of PER values of Karsiyaka and Konak is greater than 0
+```{r}
+tramways.t.test <- t.test(PER ~ District, data = tramways, var.equal = FALSE, alternative = "greater")
+tramways.t.test
+```
+The p-value of Welch's t-test is 0.02 which is less than 0.05 . I can reject the null hypothesis that the difference in means of PER values of Karsiyaka and Konak is less or equals to 0 . There may be many reasons behind it. For example, the these trams are located in different district , one of them could be more center of city and more people use it or one of the trams has longer routes than another.
+
+
+---------------------------------------CORRELATIONS AT KARISTAKA TRAM----------------------------------------------------------
+
+I wanted to know if there are any correlations between the energy consumption of cer,tep and per passenger.According to results, I am planing to model linear regression. But sometimes correlation could be misleading,when working with sample data. Correlation must be accompanied by a significance test to assess its reliability.I will do hypothesis test of the significance to decide whether the linear relationship in the sample data is strong enough to use to model the relationship in the population.If significant test concludes that correlation is statically significant, the linear line can be used to make predictions.
+
+I will use Pearson correlation.It measures linear dependence between two variables but both of these variables should be normal distributed.So first I run a normality check with Shapiro test. The null hypothesis that the data are normally distributed.
+```{r}
+shapiro.test(karsiyaka$cer)
+shapiro.test(karsiyaka$tep)
+shapiro.test(karsiyaka$per.passenger)
+```
+For the first two test, p- values are grater than 0.05 so null hypothesis is not rejected, for per passenger, p-value is less than 0.05 so the null hypothesis that the data are normally distributed is rejected. But I will assume normality for all of them.
+```{r}
+#h0 : There are no correlation between tep and per passenger at karsiyaka.tram
+karsiyaka.corr1 <- cor.test(karsiyaka$tep, karsiyaka$per.passenger, method = "pearson")
+karsiyaka.corr1
+
+#h0 : There are no correlation between tep and cer at karsiyaka.tram
+karsiyaka.corr2 <- cor.test(karsiyaka$tep, karsiyaka$cer, method = "pearson")
+karsiyaka.corr2
+
+#h0 : There are no correlation between cer and per passenger at karsiyaka.tram
+karsiyaka.corr3 <- cor.test(karsiyaka$cer, karsiyaka$per.passenger, method = "pearson")
+karsiyaka.corr3
+```
+Correlation between tep and per passenger at Karsiyaka tram
+p-value = 0.0052
+Cor.coeff = -0.68
+p-values < 0.05
+I can conclude that tep and per passenger are significantly correlated for Karsiyaka Tram. I reject the null hypothesis.
+
+Correlation between tep and cer at karsiyaka.tram
+p-value = 0.45
+Cor.coeff = 0.20
+p-values > 0.05
+I can conclude that tep and per passenger are not significantly correlated for Karsiyaka Tram. I fail to reject the null hypothesis.
+
+Correlation between cer and per passenger at karsiyaka.tram
+p-value = 0.30
+Cor.coeff = 0.28
+p-values > 0.05
+I can conclude that cer and per passenger are not significantly correlated for Karsiyaka Tram. I fail to reject the null hypothesis.
+
+I can see that when it comes to cer, it is not corelated with any others for Karsiyaka Tram. Therefore,the average value of tep and per passenger should be the same regardless of cer value and vice versa.
+
+---------------------------------------CORRELATIONS AT KONAK TRAM----------------------------------------------------------
+```{r}
+#Remember cer values are from data1, tep values are from data2 and per passenger is from data3.
+shapiro.test(konak$cer)
+shapiro.test(konak$tep)
+shapiro.test(konak$per.passenger)
+```
+For the first two test, p- values are grater than 0.05 so null hypothesis is not rejected, for per passenger, p-value is less than 0.05 so the null hypothesis that the data are normally distributed is rejected. But I will assume normality for all of them.
+```{r}
+#h0 : There are no correlation between tep and per passenger at konak.tram
+konak.corr1 <- cor.test(konak$tep, konak$per.passenger, method = "pearson")
+konak.corr1
+
+#h0 : There are no correlation between tep and cer at konak.tram
+konak.corr2 <- cor.test(konak$tep, konak$cer, method = "pearson")
+konak.corr2
+
+#h0 : There are no correlation between cer and per passenger at konak.tram
+konak.corr3 <- cor.test(konak$cer, konak$per.passenger, method = "pearson")
+konak.corr3
+```
+Correlation between tep and per passenger at Konak tram
+p-value = 0.0009
+Cor.coeff = -0.76
+p-values < 0.05
+I can conclude that tep and per passenger are significantly correlated for Konak Tram. I reject the null hypothesis.
+
+Correlation between tep and cer at karsiyaka.tram
+p-value = 0.109
+Cor.coeff = 0.42
+p-values > 0.05
+I can conclude that tep and cer are not significantly correlated for Konak Tram. I fail to reject null hypothesis.
+
+Correlation between cer and per passenger at karsiyaka.tram
+p-value =  0.72
+Cor.coeff = 0.09
+p-values > 0.05
+I can conclude that cer and per passenger are not significantly correlated for Konak Tram. I fail to reject null hypothesis.
+
+---------------------------------------CORRELATIONS AT METRO----------------------------------------------------------
+```{r}
+shapiro.test(metro$cer)
+shapiro.test(metro$tep)
+shapiro.test(metro$per.passenger)
+```
+All p-values are grater than 0.05 so null hypothesis is not rejected. All data are normally distributed.
+```{r}
+#h0 : There are no correlation between tep and per passenger at metro
+metro.corr1 <- cor.test(metro$tep,metro$per.passenger, method = "pearson")
+metro.corr1
+
+#h0 : There are no correlation between tep and cer at metro
+metro.corr2 <- cor.test(metro$tep, metro$cer, method = "pearson")
+metro.corr2
+
+#h0 : There are no correlation between cer and per passenger at metro
+metro.corr3 <- cor.test(metro$cer, metro$per.passenger, method = "pearson")
+metro.corr3
+```
+Correlation between tep and per passenger at metro
+p-value = 0.0002
+Cor.coeff = -0.80
+p-values < 0.05
+I can conclude that tep and per passenger are significantly correlated for metro. I reject the null hypothesis.
+
+Correlation between tep and cer at metro
+p-value = 0.083
+Cor.coeff = 0.46
+p-values > 0.05
+I can conclude that tep and per passenger are not significantly correlated for metro.I fail to reject null hypothesis.
+
+Correlation between cer and per passenger at metro
+p-value =  0.40
+Cor.coeff = -0.23
+p-values > 0.05
+I can conclude that cer and per passenger are not significantly correlated for metro. I fail to reject null hypothesis.
+
+
+CONCLUTION FOR CORELATION BETWEEN TEP, CER, PER PASSENGER FOR KARSIYAKA TRAM,KONAK TRAM and METRO
+
+1)For all three transportation, there is significant correlation between tep and per passenger values.
+1.a)The correlation between between tep and per passenger are negative for all three transportation.
+2.b)Since the value of per passenger get by divided the number of people to consumed energy(petrol in our case),mathematically it is correct.
+2)For all the correlation tests, there are no significant correlation between cer and others(tep and per passenger). But there should be a significant correlation between cer and tep since unit of tep is (CER-AUX-W/S). I think that is a type 2 error because I reject the null hypothesis when it is actually false.
+3)There is a strong evidence to conclude that there is a significant linear relationship between tep and per passenger.I can use the regression line to model the linear relationship between tep and per passenger.
+
+--------------------------------------------- REGRESSION-------------------------------------------------------------------
+
+
+--------------------------------------------- REGRESSION for KARSIYAKA TRAM-----------------------------------
+
+In my correlation testing, there was a significant correlation between tep and per passenger for every transportation so I wanted to analyzes the relationship between energy consumption per passenger and tep. My response variable(y) is energy per passenger,my explanatory variable(x) is tep. I will use linear regression, I assumed that there is a linear relationship between energy per passenger and tep for Karsiyaka Tram.
+I think that I should be able to calculate energy per passenger with this formula: energy.per.person = a + tep*b .
+```{r}
+linear1 = lm(per.passenger ~ tep, data = karsiyaka)
+summary(linear1) 
+```
+At the summary, I can see the values of the intercept (“a") and the slope (“b”) for the tep.
+a= 6.56
+b= -0.15 
+For example, if Karsiyaka tram' tep value is 30, the model predicts that its energy consumption per passenger is around 2.06
+--->6.56 + 30*(-0.15) = 2.06
+
+But according to the "karisyaka" dataframe, I think it very unlikely to get 2.06 for tep values of 30.So is my linear model is a good fit?
+I wanted to check it with R-squared.If the R-squared value is closer to the 1, it means it is a good fit.
+
+I see that my R-squared values are around 0.4 , to make sure I wanted plot the results and add a regression line.
+```{r}
+plot(x=karsiyaka$tep, y=karsiyaka$per.passenger ,pch=16 ,col = "purple") #Plot the results
+abline(linear1) #Add a regression line
+```
+The plot looks bad. But before I made any conclusions, I should check the residuals also. Ideally, when plotting the residuals, they should look random. Otherwise means that maybe there is a hidden pattern that the linear model is not considering.
+```{r}
+plot(linear1$residuals, pch = 16, col = "blue")
+```
+I am confused with the look of plot,I think the plot looks random but it also reminds me the pattern of sine graph, like there may be some curves. So I must continue with my investigations. There may be some influential points like outliers that may be messing with my linear model.
+I used cooks.distance function on the linear model and plot the distances of points.
+```{r}
+plot(cooks.distance(linear1), pch = 16, col = "red")
+```
+I noticed that there is a point that does not follow the pattern, and it might be affecting the model. There are three reasons why : someone made a recording error, someone made a mistake collecting the observation or the point is valid.If the case is first or second one, then I can just remove the point but I think, in my case it is the third reason. Because I check the "karsiyaka" dataframe and per.passenger column and see that the fourth value(5.94) is much bigger than any other values. Therefore, the model cannot account for the behavior.Maybe I should try a non-linear model.
+
+----------NON-LINEAR REGRESSION for KARSİYAKA TRAM-----------------
+Since my plot may look like a curve, I decided to use polynomial regression.
+The polynomial regression adds polynomial or quadratic terms to the regression. 
+First I split the data into train and test data then computed a sixfth-order polynomial fit.
+```{r}
+# predicting energy per passanger 
+# predictor variable : tep 
+sample <- sample.int(n = nrow(karsiyaka), size = floor(.75*nrow(karsiyaka)), replace = F)
+train.data <- karsiyaka[sample, ]
+test.data  <- karsiyaka[-sample, ]
+
+polyReg <- lm(karsiyaka$per.passenger ~ poly(karsiyaka$tep, 6, raw = TRUE), data = train.data)
+summary(polyReg)
+
+```
+As I can see from output,after the third order they are not significant. So,I just created a third polynomial regression model.
+```{r}
+library(magrittr) #for pipe
+
+#m is for model (fitted) values, o is for observed (true) values.
+RMSE = function(m, o){
+  sqrt(mean((m - o)^2))
+}
+
+R2 = function(m,o){
+  cor(m,o)^2
+}
+
+# Build the model
+model <- lm(per.passenger ~ poly(tep, 3, raw = TRUE), data = train.data)
+# Make predictions
+predictions <- model %>% predict(test.data)
+modelPerfomance = data.frame(rmse = RMSE(predictions, test.data$per.passenger), R2 = R2(predictions, test.data$per.passenger))
+modelPerfomance
+
+```
+
+```{r}
+ggplot(train.data, aes(tep, per.passenger) ) +geom_point() + stat_smooth(method = lm, formula = y ~ poly(x, 3, raw = TRUE))
+```
+
+RMSE is a good way of measuring how accurately the model predicts.It follows an assumption that error are unbiased and follow a normal distribution.The lower scores means better fit. The 0.42 score is not perfect but enough.Also,in terms of linear regression, variance is a measure of how far observed values differ from the average of predicted values.It is good to have low variance,what low means is quantified by the R2 score. The R2 score is betwenn 0 and 1.R2 is (total variance explained by model)/ total variance.So if it is 1, the two variables(tep and per passenger in my case) are perfectly correlated with no variance at all.If R2 close to 0, it means that the regression model is not valid generally. I got 0.66 for R2 score, it is good enough to be valid. 
+
+---------------------------------------------LINEAR REGRESSION FOR KONAK TRAM-----------------------------------------------------------
+```{r}
+linear1 = lm(per.passenger ~ tep, data = konak)
+summary(linear1) 
+```
+At the summary, I can see the values of the intercept (“a") and the slope (“b”) for the tep.
+a= 2.31
+b= -0.03 
+
+```{r}
+mean(konak$tep)
+mean(konak$per.passenger)
+```
+I want to try the linear model for mean of tep and per passenger value to if the result would be reasonable or not.
+The mean of tep is : 52
+The mean of per passenger is : 0.7 
+The formula would be :
+--->2.31 + 52*(-0.03) = 0.75 , it is very close to 0.7 and very reasonable number for energy consumption per passenger at tep value for Konak Tram. So I think that the linear model is valid so there is no need for non-linear regression.
+
+---------------------------------------------LINEAR REGRESSION FOR METRO-----------------------------------------------------------
+```{r}
+linear1 = lm(per.passenger ~ tep, data = metro)
+summary(linear1) 
+```
+At the summary, I can see the values of the intercept (“a") and the slope (“b”) for the tep.
+a= 2.69
+b= -0.005
+
+```{r}
+mean(metro$tep)
+mean(metro$per.passenger)
+```
+I want to try the linear model for mean of tep and per passenger value to if the result would be reasonable or not.
+The mean of tep is : 318
+The mean of per passenger is : 1.0
+The formula would be :
+--->2.69 + 318*(-0.005) = 1.0 , it is the exact same number. Therefore, the linear model is valid so there is no need for non-linear regression.
+
+
+
+CONCLUSION
+
+
+In conclusion, there are some outcomes from each data. For example the most energy consumed in the spring months, Karsiyaka Tram has the most CER consumption and the Izmir Metro has the most variation. In t-test for Metro, I wrote null hypothesis myself according to data. I failed the reject two of them. I can say that I am good at making null hypothesis or that the data is simple enough to interpret for me. Ideally, there should be 30 rows but in these data sets, it is 15. I used all of them regardless the year. I ignored the year column and did not use it. Since there are few data, I overlooked the outlier and assume normality when it is not normal. Because I did not want to work with less data.
+From tests, it conclude the difference in means of energy consumption per passenger. I can say that district of trams are important. It is not useful for to built a tram in  remote places where only a number of people can use it. For all three transportation, there is significant correlation between tep and per passenger values. For all the correlation tests, there are no significant correlation between cer and others(tep and per passenger). But there should be a significant correlation between cer and tep since unit of tep is (CER-AUX-W/S). I think that is a type 2 error because I reject the null hypothesis when it is actually false. Since there is there is a correlation between tep and energy per passenger consumption, we can predict how much energy consumption if the tep value is known, it is helpful for calculating the carbon foot print of a city's transportation and municipalities can make environmental laws accordingly to it. Finally, the data itself can be useful at some extend, it needed to be changed into different data frames and manipulated for broad investigation.The Izmir Metropolitan Municipality has weak data collection program. In the future, with a large scale of data, there can be more results and outcomes.
+
+
+
+
+
